@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Elprisjämförelse – Rådgivarverktyg</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #eef0f3;
+    --surface: #ffffff;
+    --border: #d9dce1;
+    --border-soft: #e7eaee;
+    --text: #14181f;
+    --text-muted: #5b6472;
+    --text-subtle: #9099a5;
+    --header-blue: #1f3864;
+    --divider-blue: #1f3864;
+    --highlight: #fff2cc;
+    --highlight-border: #f0d879;
+    --note-bg: #eaf3e3;
+    --note-bg-hover: #ddecd2;
+    --pos: #146c43;
+    --neg: #a8322a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12.5px; color: var(--text); background: var(--bg);
+    -webkit-font-smoothing: antialiased; line-height: 1.35;
+  }
+  .num, input[type="number"], .val { font-variant-numeric: tabular-nums; }
+
+  header.app {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 8px 16px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 40;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 13px; }
+  .brand-dot { width: 8px; height: 8px; background: var(--header-blue); border-radius: 2px; }
+  .brand small { font-weight: 500; color: var(--text-muted); margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--border); }
+  .tag-note { font-size: 11px; color: var(--text-subtle); }
+
+  .cust {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 8px 16px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;
+    position: sticky; top: 37px; z-index: 35;
+  }
+  .cust .ptitle {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-subtle); margin-right: 8px; align-self: center;
+  }
+  .field { display: flex; flex-direction: column; gap: 2px; min-width: 110px; }
+  .field label { font-size: 10.5px; font-weight: 500; color: var(--text-muted); }
+  .field input, .field select {
+    font-family: inherit; font-size: 12.5px; padding: 4px 7px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface); color: var(--text);
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--header-blue); box-shadow: 0 0 0 2px rgba(31,56,100,.15); }
+
+  .tabbar {
+    display: flex; align-items: center; gap: 1px; padding: 0 16px;
+    background: var(--bg); border-bottom: 1px solid var(--border); overflow-x: auto;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; font: 500 12.5px/1 'Inter', sans-serif;
+    color: var(--text-muted); background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; white-space: nowrap; margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text); background: rgba(0,0,0,.03); }
+  .tab.active { color: var(--header-blue); border-bottom-color: var(--header-blue); background: var(--surface); }
+  .tab .x { font-size: 14px; color: var(--text-subtle); line-height: 1; padding: 0 2px; border-radius: 3px; }
+  .tab .x:hover { background: rgba(0,0,0,.08); color: var(--neg); }
+  .tab-actions { display: flex; gap: 4px; margin-left: 6px; }
+  .tbtn {
+    font: 500 11.5px 'Inter', sans-serif;
+    padding: 5px 9px; background: var(--surface); color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .tbtn:hover { color: var(--text); border-color: var(--text-subtle); }
+
+  main { padding: 12px 16px 40px; max-width: 1300px; margin: 0 auto; }
+  .sheet {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden; box-shadow: 0 1px 2px rgba(16,24,40,.04);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 1.2fr) minmax(140px, 1fr) 18px minmax(140px, 1fr) minmax(180px, 1.2fr);
+  }
+
+  .title-bar {
+    background: var(--header-blue); color: #fff;
+    padding: 7px 12px; font-weight: 700; font-size: 13px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .title-bar .sub { font-weight: 500; font-size: 11.5px; color: #c7d3e8; }
+
+  .instr {
+    background: #eceef2; padding: 6px 12px; font-size: 11.5px;
+    color: var(--text-muted); border-bottom: 1px solid var(--border);
+  }
+
+  /* Logo quick-picker */
+  .qprov {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; background: #fafbfc;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .qprov-label {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--text-subtle); white-space: nowrap;
+  }
+  .qprov-list { display: flex; gap: 5px; flex-wrap: wrap; }
+  .qprov-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 4px 10px 4px 6px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--surface); color: var(--text);
+    font: 500 11.5px 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .qprov-btn:hover { border-color: var(--header-blue); background: #eef2fa; }
+  .qprov-btn.active { border-color: var(--header-blue); background: #e3ebf9; color: var(--header-blue); font-weight: 600; }
+  .qprov-btn img { width: 16px; height: 16px; flex-shrink: 0; border-radius: 2px; }
+  .qprov-btn img.fallback { background: #e7eaee; }
+
+  .colhead { background: #eceef2; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 12.5px; }
+  .colhead .c { padding: 8px 10px; border-right: 1px solid var(--border); text-align: center; }
+  .colhead .c:last-child { border-right: none; }
+  .colhead .c.first { text-align: left; }
+  .colhead .c.sep { background: var(--divider-blue); padding: 0; }
+  .colhead .c.comment { background: var(--note-bg); }
+  .colhead .prov-a { font-size: 14px; font-weight: 700; color: var(--header-blue); }
+  .colhead input.prov-name {
+    border: 1px solid transparent; background: transparent;
+    font: 700 14px 'Inter', sans-serif; color: var(--header-blue);
+    width: 100%; text-align: center; padding: 2px 4px; border-radius: 3px;
+  }
+  .colhead input.prov-name:hover { border-color: var(--border); background: var(--surface); }
+  .colhead input.prov-name:focus { outline: none; border-color: var(--header-blue); background: var(--surface); box-shadow: 0 0 0 2px rgba(31,56,100,.15); }
+
+  .sect {
+    background: var(--header-blue); color: #fff;
+    font-weight: 700; font-size: 12.5px; padding: 6px 12px;
+    grid-column: 1 / -1;
+  }
+  .sect.light { background: #cfd4dc; color: var(--text); }
+
+  .row { border-bottom: 1px solid var(--border-soft); }
+  .row:last-of-type { border-bottom: none; }
+  .row .c {
+    padding: 4px 10px; border-right: 1px solid var(--border-soft);
+    display: flex; align-items: center; min-height: 30px;
+  }
+  .row .c:last-child { border-right: none; }
+  .row .c.label { font-weight: 600; color: var(--text); }
+  .row .c.label .hint { font-weight: 400; font-size: 11px; color: var(--text-subtle); margin-left: 4px; }
+  .row .c.a, .row .c.b { justify-content: flex-end; }
+  .row .c.sep { background: var(--divider-blue); padding: 0; border: none; }
+  .row .c.comment { background: var(--note-bg); padding: 2px 4px; }
+  .row .c.comment input {
+    border: 1px solid transparent; background: transparent;
+    font: inherit; font-size: 12px; color: var(--text);
+    width: 100%; padding: 3px 6px; border-radius: 3px;
+  }
+  .row .c.comment input:hover { background: var(--note-bg-hover); }
+  .row .c.comment input:focus { outline: none; background: #fff; border-color: var(--header-blue); box-shadow: 0 0 0 2px rgba(31,56,100,.15); }
+
+  .row .c.input { padding: 2px 4px; }
+  .row .c.input input, .row .c.input select {
+    font: inherit; font-size: 12.5px; width: 100%; padding: 4px 7px;
+    border: 1px solid var(--border); border-radius: 3px;
+    background: var(--surface); color: var(--text);
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .row .c.input select { text-align: left; }
+  .row .c.input input:focus, .row .c.input select:focus {
+    outline: none; border-color: var(--header-blue); box-shadow: 0 0 0 2px rgba(31,56,100,.15);
+  }
+  .row .c.input input[readonly] {
+    background: #f4f6f8; color: var(--text-muted); border-color: transparent; cursor: not-allowed;
+  }
+
+  .val { text-align: right; width: 100%; font-variant-numeric: tabular-nums; }
+  .row.hl .c { background: var(--highlight); border-color: var(--highlight-border); }
+  .row.hl .c.sep { background: var(--divider-blue); }
+  .row.hl .c.comment { background: #f4ecc7; }
+  .row.hl .c.label, .row.hl .val { font-weight: 700; }
+
+  .full-row {
+    background: var(--highlight); border-top: 1px solid var(--highlight-border);
+    padding: 8px 12px; text-align: center;
+    font-weight: 700; font-size: 13px; color: var(--text);
+    grid-column: 1 / -1;
+  }
+  .full-row.neutral { background: #eef0f3; color: var(--text-muted); font-weight: 600; }
+
+  .footnote {
+    padding: 6px 12px; font-size: 11px; color: var(--text-subtle);
+    background: #fafbfc; border-top: 1px solid var(--border-soft); font-style: italic;
+  }
+
+  .pos { color: var(--pos); }
+  .neg { color: var(--neg); }
+
+  /* Input-with-unit wrapper. Bigger right padding so long numbers don't collide with unit. */
+  .iw {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.iw input {
+  flex: 1;
+  padding-right: 8px;
+  text-align: right;
+}
+
+.iw .u {
+  margin-left: 6px;
+  white-space: nowrap;
+  font-size: 10.5px;
+  color: var(--text-subtle);
+  pointer-events: none;
+  font-weight: 500;
+}
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: minmax(160px, 1fr) 1fr 12px 1fr 1fr; }
+  }
+
+#summary-line {
+  position: fixed;
+  right: 20px;
+  top: 120px;
+  width: 260px;
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="brand">
+    <span class="brand-dot"></span>
+    Elprisjämförelse
+    <small>Rådgivarverktyg · sida vid sida</small>
+  </div>
+  <div class="tag-note">Transparenta beräkningar · fyll i totalt elpris i öre/kWh</div>
+</header>
+
+<section class="cust">
+  <div class="ptitle">Kunduppgifter</div>
+  <div class="field">
+    <label for="cust-consumption">Årsförbrukning (kWh/år)</label>
+    <input type="number" id="cust-consumption" min="0" step="100" value="20000" />
+  </div>
+  <div class="field">
+    <label for="cust-area">Elområde</label>
+    <select id="cust-area">
+      <option>SE1</option><option>SE2</option><option selected>SE3</option><option>SE4</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="cust-fuse">Huvudsäkring (A)</label>
+    <select id="cust-fuse">
+      <option>16</option><option selected>20</option><option>25</option><option>35</option>
+      <option>50</option><option>63</option><option>80</option><option>100</option>
+      <option>125</option><option>160</option><option>200</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="cust-heating">Uppvärmning</label>
+    <select id="cust-heating">
+      <option>Bergvärme</option><option>Luftvärmepump</option><option>Frånluftsvärmepump</option>
+      <option>Direktverkande el</option><option>Vattenburen el</option><option>Fjärrvärme</option>
+      <option>Ved / pellets</option><option>Annat</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="cust-contract">Nuvarande avtal</label>
+    <select id="cust-contract">
+      <option>Rörligt</option><option>Fast</option><option>Timpris</option>
+      <option>Tillsvidare</option><option>Okänt</option>
+    </select>
+  </div>
+</section>
+
+<nav class="tabbar">
+  <div id="tabs" style="display:flex;"></div>
+  <div class="tab-actions">
+    <button class="tbtn" id="btn-add">＋ Ny flik</button>
+    <button class="tbtn" id="btn-dup">⧉ Duplicera</button>
+  </div>
+</nav>
+
+<main>
+  <div id="tab-content"></div>
+</main>
+
+<script>
+/* =====================================================================
+   PROVIDER DIRECTORY
+   ===================================================================== */
+const PROVIDERS = [
+  { name: 'Fortum',           domain: 'fortum.com',       url: 'https://www.fortum.com/se/el/teckna-elavtal' },
+  { name: 'Vattenfall',       domain: 'vattenfall.se',    url: 'https://www.vattenfall.se/elavtal/' },
+  { name: 'E.ON Sverige',     domain: 'eon.se',           url: 'https://www.eon.se/el/elavtal' },
+  { name: 'Göteborg Energi',  domain: 'goteborgenergi.se',url: 'https://www.goteborgenergi.se/privat/elavtal' },
+  { name: 'Jämtkraft',        domain: 'jamtkraft.se',     url: 'https://www.jamtkraft.se/elavtal' },
+  { name: 'Bixia',            domain: 'bixia.se',         url: 'https://www.bixia.se/elavtal' },
+  { name: 'Telge Energi',     domain: 'telgeenergi.se',   url: 'https://www.telgeenergi.se/elavtal' },
+  { name: 'Skellefteå Kraft', domain: 'skekraft.se',      url: 'https://www.skekraft.se/elavtal' },
+  { name: 'Mälarenergi',      domain: 'malarenergi.se',   url: 'https://www.malarenergi.se/elavtal' },
+  { name: 'Kraftringen',      domain: 'kraftringen.se',   url: 'https://www.kraftringen.se/privat/elavtal' }
+];
+const faviconURL = (domain) => `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const customer = {
+  consumption: 20000,
+  area: 'SE3', fuse: '20', heating: 'Bergvärme', currentContract: 'Rörligt'
+};
+
+const defaultInputs = () => ({
+  price_ore: 0, fixed_fee: 0, discount: 0, contract_length: 0, contract_type: 'rörligt'
+});
+const defaultComments = () => ({
+  price_ore: '', fixed_fee: '', consumption: '', discount: '',
+  contract_length: '', contract_type: '',
+  price_kwh: '', variable: '', fixed: '', discount_calc: '',
+  total: '', monthly: '', effective: '', var_pct: '', sens: ''
+});
+
+let nextId = 1;
+const tabs = [];
+let activeId = null;
+
+function createTab(name = 'E.ON vs Annan leverantör', src = null) {
+  const t = {
+    id: nextId++,
+    name,
+    providerA: 'E.ON Energilösningar',
+    providerB: src ? src.providerB : 'Annan leverantör',
+    inputsA: src ? {...src.inputsA} : {...defaultInputs(), fixed_fee: 480},
+    inputsB: src ? {...src.inputsB} : defaultInputs(),
+    comments: src ? {...src.comments} : defaultComments()
+  };
+  tabs.push(t);
+  return t;
+}
+
+/* =====================================================================
+   FORMAT
+   ===================================================================== */
+const fmtKr  = (n, d=0) => !isFinite(n) ? '—'
+  : new Intl.NumberFormat('sv-SE',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n) + ' kr';
+const fmtKrSign = (n, d=2) => {
+  if (!isFinite(n)) return '—';
+  if (Math.abs(n) < 0.005) return '0 kr';
+  return new Intl.NumberFormat('sv-SE',{minimumFractionDigits:d,maximumFractionDigits:d,signDisplay:'always'}).format(n).replace('-','−') + ' kr';
+};
+const fmtKrDec = (n, d=2) => !isFinite(n) ? '—'
+  : new Intl.NumberFormat('sv-SE',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n) + ' kr';
+const fmtNum = (n, d=0) => !isFinite(n) ? '—'
+  : new Intl.NumberFormat('sv-SE',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);
+const fmtPct = (n) => !isFinite(n) ? '—'
+  : new Intl.NumberFormat('sv-SE',{minimumFractionDigits:1,maximumFractionDigits:1}).format(n) + ' %';
+const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : 0; };
+
+/* =====================================================================
+   CALC  (transparenta formler)
+   Total årskostnad = förbrukning × (öre/100) + fast avgift − rabatt
+   Månadskostnad    = årskostnad / 12
+   Effektivt pris   = årskostnad / förbrukning
+   Rörlig andel     = rörlig / total
+   Fast andel       = fast / total
+   Känslighet +10   = förbrukning × 0,10
+   ===================================================================== */
+function calc(inp, consumption) {
+  const price_kwh = inp.price_ore / 100;
+  const variable  = consumption * price_kwh;
+  const fixed     = inp.fixed_fee;
+  const discount  = inp.discount;
+  const total     = variable + fixed - discount;
+  const monthly   = total / 12;
+  const effective = consumption > 0 ? total / consumption : NaN;
+  const var_pct   = total !== 0 ? (variable / total) * 100 : NaN;
+  const fix_pct   = total !== 0 ? (fixed    / total) * 100 : NaN;
+  const sens10    = consumption * 0.10;
+  return { price_kwh, variable, fixed, discount, total, monthly, effective, var_pct, fix_pct, sens10 };
+}
+
+/* =====================================================================
+   RENDER – STRUCTURE (called once per tab switch / tab change)
+   Values are updated separately via updateValues(), so inputs are
+   never destroyed while the user types.
+   ===================================================================== */
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = '';
+  tabs.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (t.id === activeId ? ' active' : '');
+    b.innerHTML = `<span>${escapeHtml(t.name)}</span>` +
+      (tabs.length > 1 ? `<span class="x" data-close="${t.id}" title="Stäng">×</span>` : '');
+    b.onclick = (e) => {
+      if (e.target.dataset.close) closeTab(+e.target.dataset.close);
+      else { activeId = t.id; renderContent(); renderTabs(); }
+    };
+    el.appendChild(b);
+  });
+}
+
+function renderContent() {
+  const host = document.getElementById('tab-content');
+  const t = tabs.find(x => x.id === activeId);
+  if (!t) { host.innerHTML = ''; return; }
+
+  host.innerHTML = buildSheet(t);
+  attachListeners(t);
+  updateValues(t);      // fill computed values without destroying inputs
+}
+
+function buildSheet(t) {
+  return `
+    <div class="sheet">
+
+      <div class="title-bar">
+        <span>Elprisjämförelse – sida vid sida</span>
+        <span class="sub">Elpris i ÖRE/kWh (inkl. påslag). Inga månadsavgifter – endast årsavgift.</span>
+      </div>
+
+      <div class="instr">
+        Fyll i <b>Alternativ A</b> och <b>Alternativ B</b>. Förbrukning hämtas från kunduppgifter.
+        Siffrorna uppdateras automatiskt.
+      </div>
+
+      ${buildQuickPick(t)}
+
+      <div class="grid colhead">
+        <div class="c first">Fält</div>
+        <div class="c"><span class="prov-a">${escapeHtml(t.providerA)}</span></div>
+        <div class="c sep"></div>
+        <div class="c"><input type="text" class="prov-name" id="provB-input" value="${escapeAttr(t.providerB)}" /></div>
+        <div class="c comment">Kommentarer / anteckningar</div>
+      </div>
+
+      <div class="grid"><div class="sect">Ingångsvärden</div></div>
+      ${inputRow(t,'Elpris (TOTALT)',   'öre/kWh', 'price_ore',       'öre', 0.1)}
+      ${inputRow(t,'Årsavgift',         'kr/år',   'fixed_fee',       'kr',  1)}
+      ${consumptionRow(t)}
+      ${inputRow(t,'Engångsrabatt',     'kr',      'discount',        'kr',  1)}
+      ${inputRow(t,'Bindningstid',      'mån',     'contract_length', 'mån', 1)}
+      ${contractTypeRow(t)}
+
+      <div class="grid"><div class="sect">Beräkningar (i kronor) – elpris i öre omräknas automatiskt</div></div>
+      ${calcRow(t,'price_kwh',     'Elpris',                    '/ kWh')}
+      ${calcRow(t,'variable',      'Rörlig del årsvis',         'kr/år')}
+      ${calcRow(t,'fixed',         'Fast del årsvis',           'kr/år')}
+      ${calcRow(t,'discount_calc', 'Engångsrabatt',             'dras av')}
+      ${calcRow(t,'total',         'Total årskostnad',          'kr', true)}
+      ${calcRow(t,'monthly',       'Månadskostnad',             'kr/mån')}
+      ${calcRow(t,'effective',     'Effektivt pris',            '/ kWh · allt inkluderat')}
+      ${calcRow(t,'var_pct',       'Rörlig / Fast andel',       'av total')}
+      ${calcRow(t,'sens',          'Känslighet +10 öre/kWh',    'påverkan per år')}
+
+      <div class="grid"><div class="sect light">Sammanfattning</div></div>
+      ${diffRow('diffYear',  'Skillnad årskostnad (B − A)',   'kr/år')}
+      ${diffRow('diffMonth', 'Skillnad månadskostnad (B − A)','kr/mån')}
+
+      <div class="full-row" id="summary-line"></div>
+
+      <div class="footnote">
+        Rabatt behandlas som engångsavdrag från första årets totalkostnad.
+        Andelar = rörlig/total resp. fast/total – vid rabatt &gt; 0 summerar de ej till 100 %.
+      </div>
+    </div>
+  `;
+}
+
+function buildQuickPick(t) {
+  const items = PROVIDERS.map(p => {
+    const active = (t.providerB === p.name) ? ' active' : '';
+    return `
+      <button type="button" class="qprov-btn${active}" data-provider="${escapeAttr(p.name)}" data-url="${escapeAttr(p.url)}" title="Välj ${escapeAttr(p.name)} · ${escapeAttr(p.url)}">
+        <img src="${faviconURL(p.domain)}" alt="" onerror="this.classList.add('fallback')" />
+        <span>${escapeHtml(p.name)}</span>
+      </button>`;
+  }).join('');
+  return `
+    <div class="qprov">
+      <div class="qprov-label">Snabbval (sätter Alt. B)</div>
+      <div class="qprov-list">${items}</div>
+    </div>
+  `;
+}
+
+/* --- Row builders --- */
+function inputRow(t, label, unit, field, unitShort, step) {
+  const aVal = t.inputsA[field] ?? 0;
+  const bVal = t.inputsB[field] ?? 0;
+  return `
+    <div class="grid row">
+      <div class="c label">${label}<span class="hint">${unit}</span></div>
+      <div class="c input"><div class="iw"><input type="number" data-side="A" data-field="${field}" min="0" step="${step}" value="${aVal}"><span class="u">${unitShort}</span></div></div>
+      <div class="c sep"></div>
+      <div class="c input"><div class="iw"><input type="number" data-side="B" data-field="${field}" min="0" step="${step}" value="${bVal}"><span class="u">${unitShort}</span></div></div>
+      ${commentCell(t, field)}
+    </div>`;
+}
+function consumptionRow(t) {
+  return `
+    <div class="grid row">
+      <div class="c label">Förbrukning<span class="hint">kWh/år · från kunduppgifter</span></div>
+      <div class="c input"><div class="iw"><input type="number" id="cons-a" value="${customer.consumption}" readonly><span class="u">kWh</span></div></div>
+      <div class="c sep"></div>
+      <div class="c input"><div class="iw"><input type="number" id="cons-b" value="${customer.consumption}" readonly><span class="u">kWh</span></div></div>
+      ${commentCell(t, 'consumption')}
+    </div>`;
+}
+function contractTypeRow(t) {
+  const opts = ['rörligt','fast','timpris'];
+  const make = (side, val) => `<select data-side="${side}" data-field="contract_type">${opts.map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}</select>`;
+  return `
+    <div class="grid row">
+      <div class="c label">Avtalstyp</div>
+      <div class="c input">${make('A', t.inputsA.contract_type)}</div>
+      <div class="c sep"></div>
+      <div class="c input">${make('B', t.inputsB.contract_type)}</div>
+      ${commentCell(t, 'contract_type')}
+    </div>`;
+}
+function calcRow(t, key, label, hint = '', highlight = false) {
+  return `
+    <div class="grid row ${highlight?'hl':''}">
+      <div class="c label">${label}${hint?`<span class="hint">${hint}</span>`:''}</div>
+      <div class="c a"><span class="val" id="val-a-${key}"></span></div>
+      <div class="c sep"></div>
+      <div class="c b"><span class="val" id="val-b-${key}"></span></div>
+      ${commentCell(t, key)}
+    </div>`;
+}
+function diffRow(key, label, unit) {
+  return `
+    <div class="grid row">
+      <div class="c label">${label}</div>
+      <div class="c a"></div>
+      <div class="c sep"></div>
+      <div class="c b"><span class="val" id="val-${key}"></span> <span class="hint" style="margin-left:4px">${unit}</span></div>
+      <div class="c comment"></div>
+    </div>`;
+}
+function commentCell(t, key) {
+  const v = t.comments[key] ?? '';
+  return `<div class="c comment"><input type="text" data-comment="${key}" value="${escapeAttr(v)}" placeholder="" /></div>`;
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function escapeAttr(s){return escapeHtml(s);}
+
+/* =====================================================================
+   VALUE UPDATES (no DOM re-creation – keeps focus intact)
+   ===================================================================== */
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+function setHTML(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}
+function setVal(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.value = v;
+}
+
+function updateValues(t) {
+  if (!t) return;
+  const a = calc(t.inputsA, customer.consumption);
+  const b = calc(t.inputsB, customer.consumption);
+  const dYear  = b.total   - a.total;
+  const dMonth = b.monthly - a.monthly;
+
+  // Calculation rows – A side
+  setText('val-a-price_kwh',     fmtKrDec(a.price_kwh, 4));
+  setText('val-a-variable',      fmtKr(a.variable, 0));
+  setText('val-a-fixed',         fmtKr(a.fixed, 0));
+  setText('val-a-discount_calc', a.discount > 0 ? '− ' + fmtKr(a.discount, 0) : fmtKr(0, 0));
+  setText('val-a-total',         fmtKrDec(a.total, 2));
+  setText('val-a-monthly',       fmtKrDec(a.monthly, 2));
+  setText('val-a-effective',     fmtKrDec(a.effective, 4));
+  setText('val-a-var_pct',       fmtPct(a.var_pct) + ' / ' + fmtPct(a.fix_pct));
+  setText('val-a-sens',          '+ ' + fmtKr(a.sens10, 0) + ' / år');
+
+  // Calculation rows – B side
+  setText('val-b-price_kwh',     fmtKrDec(b.price_kwh, 4));
+  setText('val-b-variable',      fmtKr(b.variable, 0));
+  setText('val-b-fixed',         fmtKr(b.fixed, 0));
+  setText('val-b-discount_calc', b.discount > 0 ? '− ' + fmtKr(b.discount, 0) : fmtKr(0, 0));
+  setText('val-b-total',         fmtKrDec(b.total, 2));
+  setText('val-b-monthly',       fmtKrDec(b.monthly, 2));
+  setText('val-b-effective',     fmtKrDec(b.effective, 4));
+  setText('val-b-var_pct',       fmtPct(b.var_pct) + ' / ' + fmtPct(b.fix_pct));
+  setText('val-b-sens',          '+ ' + fmtKr(b.sens10, 0) + ' / år');
+
+  // Differences
+  const yearEl  = document.getElementById('val-diffYear');
+  const monthEl = document.getElementById('val-diffMonth');
+  if (yearEl) {
+    yearEl.textContent = fmtKrSign(dYear, 2).replace(' kr','');
+    yearEl.className = 'val ' + diffCls(dYear);
+  }
+  if (monthEl) {
+    monthEl.textContent = fmtKrSign(dMonth, 2).replace(' kr','');
+    monthEl.className = 'val ' + diffCls(dMonth);
+  }
+
+  // Summary line (factual re-statement of the numbers, no recommendation logic)
+  updateSummary(t, dYear, dMonth);
+}
+
+function diffCls(d) {
+  if (!isFinite(d) || Math.abs(d) < 0.005) return '';
+  return d < 0 ? 'pos' : 'neg';
+}
+
+function updateSummary(t, dYear, dMonth) {
+  const el = document.getElementById('summary-line');
+  if (!el) return;
+  if (!isFinite(dYear) || Math.abs(dYear) < 0.5) {
+    el.classList.add('neutral');
+    el.textContent = 'Samma totalkostnad';
+    return;
+  }
+  el.classList.remove('neutral');
+  const cheaper = dYear < 0 ? t.providerB : t.providerA;
+  el.textContent = `${cheaper} är billigare (${fmtKr(Math.abs(dYear),0)}/år, ${fmtNum(Math.abs(dMonth),0)} kr/mån)`;
+}
+
+function updateConsumptionInputs() {
+  setVal('cons-a', customer.consumption);
+  setVal('cons-b', customer.consumption);
+}
+
+/* =====================================================================
+   LISTENERS (attached once per renderContent)
+   ===================================================================== */
+function attachListeners(t) {
+  // Provider B name input (column header)
+  const pb = document.getElementById('provB-input');
+  if (pb) {
+    pb.addEventListener('input', () => {
+      t.providerB = pb.value || 'Annan leverantör';
+      updateSummary(t, calc(t.inputsB, customer.consumption).total - calc(t.inputsA, customer.consumption).total,
+                       calc(t.inputsB, customer.consumption).monthly - calc(t.inputsA, customer.consumption).monthly);
+      updateQuickPickActive(t);
+    });
+  }
+
+  // A/B side inputs
+  document.querySelectorAll('[data-side][data-field]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const side = inp.dataset.side, field = inp.dataset.field;
+      const tgt = side === 'A' ? t.inputsA : t.inputsB;
+      tgt[field] = field === 'contract_type' ? inp.value : num(inp.value);
+      updateValues(t);
+    });
+  });
+
+  // Comment inputs
+  document.querySelectorAll('[data-comment]').forEach(inp => {
+    inp.addEventListener('input', () => { t.comments[inp.dataset.comment] = inp.value; });
+  });
+
+  // Provider quick-pick buttons
+  document.querySelectorAll('.qprov-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.provider;
+      const url = btn.dataset.url;
+
+      // sätt leverantör
+      t.providerB = name;
+      const pbInp = document.getElementById('provB-input');
+      if (pbInp) pbInp.value = name;
+
+      updateQuickPickActive(t);
+      updateValues(t);
+
+      // öppna sida
+      if (url) {
+        window.open(url, '_blank');
+      }
+    });
+  });
+}
+
+function updateQuickPickActive(t) {
+  document.querySelectorAll('.qprov-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.provider === t.providerB);
+  });
+}
+
+/* =====================================================================
+   GLOBAL EVENTS
+   ===================================================================== */
+document.getElementById('cust-consumption').addEventListener('input', e => {
+  customer.consumption = num(e.target.value);
+  updateConsumptionInputs();
+  const t = tabs.find(x => x.id === activeId);
+  updateValues(t);
+});
+document.getElementById('cust-area').addEventListener('change', e => customer.area = e.target.value);
+document.getElementById('cust-fuse').addEventListener('change', e => customer.fuse = e.target.value);
+document.getElementById('cust-heating').addEventListener('change', e => customer.heating = e.target.value);
+document.getElementById('cust-contract').addEventListener('change', e => customer.currentContract = e.target.value);
+
+document.getElementById('btn-add').addEventListener('click', () => {
+  const t = createTab();
+  activeId = t.id;
+  renderTabs();
+  renderContent();
+});
+document.getElementById('btn-dup').addEventListener('click', () => {
+  const src = tabs.find(x => x.id === activeId);
+  if (!src) return;
+  const t = createTab(src.name + ' (kopia)', src);
+  activeId = t.id;
+  renderTabs();
+  renderContent();
+});
+function closeTab(id){
+  if (tabs.length <= 1) return;
+  const i = tabs.findIndex(x=>x.id===id); if (i===-1) return;
+  tabs.splice(i,1);
+  if (activeId === id) activeId = tabs[Math.max(0,i-1)].id;
+  renderTabs();
+  renderContent();
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+const first = createTab('E.ON vs Annan leverantör');
+activeId = first.id;
+renderTabs();
+renderContent();
+</script>
+</body>
+</html>
